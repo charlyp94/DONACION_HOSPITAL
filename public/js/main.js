@@ -185,3 +185,145 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+// ==========================================================================
+// CÓDIGO PARA EL HISTORIAL PÚBLICO DE DONACIONES
+// ==========================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    const btnVerHistorial = document.getElementById('btnVerHistorial');
+    const modalHistorial = document.getElementById('modalHistorial');
+    const btnCerrarHistorial = document.getElementById('btnCerrarHistorial');
+    const tablaHistorialCuerpo = document.getElementById('tablaHistorialCuerpo');
+
+    // Abrir modal y cargar datos
+    if (btnVerHistorial && modalHistorial) {
+        btnVerHistorial.addEventListener('click', () => {
+            modalHistorial.style.display = 'flex';
+            cargarHistorialPublico();
+        });
+    }
+
+    // Cerrar modal con la X
+    if (btnCerrarHistorial && modalHistorial) {
+        btnCerrarHistorial.addEventListener('click', () => {
+            modalHistorial.style.display = 'none';
+        });
+    }
+
+    // Cerrar haciendo clic afuera
+    window.addEventListener('click', (e) => {
+        if (e.target === modalHistorial) {
+            modalHistorial.style.display = 'none';
+        }
+    });
+
+    // Función para hacer la petición al servidor
+    async function cargarHistorialPublico() {
+        try {
+            if (!tablaHistorialCuerpo) return;
+            tablaHistorialCuerpo.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Cargando historial...</td></tr>';
+
+            const respuesta = await fetch('http://localhost:3000/api/donaciones/aprobadas');
+            const donaciones = await respuesta.json();
+
+            tablaHistorialCuerpo.innerHTML = ''; // Limpiamos el mensaje de carga
+
+            if (donaciones.length === 0) {
+                tablaHistorialCuerpo.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Aún no hay donaciones registradas en este sector.</td></tr>';
+                return;
+            }
+
+            // Recorremos las donaciones y armamos las filas
+            donaciones.forEach(donacion => {
+                const fila = document.createElement('tr');
+                fila.style.borderBottom = '1px solid #eee';
+                
+                // Formateamos la fecha para que quede prolija (DD/MM/AAAA)
+                const fecha = new Date(donacion.fecha).toLocaleDateString('es-AR');
+
+                fila.innerHTML = `
+                    <td style="padding: 10px; font-weight: bold;">${donacion.nombre}</td>
+                    <td style="padding: 10px;">${donacion.categoria}</td>
+                    <td style="padding: 10px; color: #666;">${fecha}</td>
+                `;
+                tablaHistorialCuerpo.appendChild(fila);
+            });
+
+        } catch (error) {
+            console.error('Error al cargar el historial:', error);
+            if (tablaHistorialCuerpo) {
+                tablaHistorialCuerpo.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:red;">No se pudo cargar el historial en este momento.</td></tr>';
+            }
+        }
+    }
+});
+// ==========================================================================
+// AGREGADO EXCLUSIVO PARA EL HISTORIAL PÚBLICO (PEGA ESTO ABAJO DEL TODO)
+// ==========================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    const btnVerHistorial = document.getElementById('btnVerHistorial');
+    const modalHistorial = document.getElementById('modalHistorial');
+    const btnCerrarHistorial = document.getElementById('btnCerrarHistorial');
+    const tablaHistorialCuerpo = document.getElementById('tablaHistorialCuerpo');
+
+    if (btnVerHistorial && modalHistorial) {
+        btnVerHistorial.addEventListener('click', () => {
+            // Usamos el método nativo de tu diseño para abrir modales de forma segura
+            modalHistorial.style.display = 'flex'; 
+            cargarHistorialPublico();
+        });
+    }
+
+    if (btnCerrarHistorial && modalHistorial) {
+        btnCerrarHistorial.addEventListener('click', () => {
+            modalHistorial.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('click', (e) => {
+        if (e.target === modalHistorial) {
+            modalHistorial.style.display = 'none';
+        }
+    });
+
+    async function cargarHistorialPublico() {
+        try {
+            if (!tablaHistorialCuerpo) return;
+            tablaHistorialCuerpo.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Cargando historial...</td></tr>';
+
+            // Usamos ruta relativa segura para evitar problemas de red local
+            const respuesta = await fetch('/api/donaciones/aprobadas');
+            const donaciones = await respuesta.json();
+
+            tablaHistorialCuerpo.innerHTML = ''; 
+
+            if (donaciones.length === 0) {
+                tablaHistorialCuerpo.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#666;">Aún no hay donaciones aprobadas para mostrar.</td></tr>';
+                return;
+            }
+
+            donaciones.forEach(donacion => {
+                const fila = document.createElement('tr');
+                fila.style.borderBottom = '1px solid #eee';
+                
+                // Leemos 'fecha' a secas como lo corregiste en tu MySQL
+                let fechaFormateada = "Sin fecha";
+                if (donacion.fecha) {
+                    fechaFormateada = new Date(donacion.fecha).toLocaleDateString('es-AR');
+                }
+
+                fila.innerHTML = `
+                    <td style="padding: 12px 15px; font-weight: bold; color: #333;">${donacion.nombre}</td>
+                    <td style="padding: 12px 15px; color: #555;">${donacion.categoria}</td>
+                    <td style="padding: 12px 15px; color: #777;">${fechaFormateada}</td>
+                `;
+                tablaHistorialCuerpo.appendChild(fila);
+            });
+
+        } catch (error) {
+            console.error('Error al cargar el historial:', error);
+            if (tablaHistorialCuerpo) {
+                tablaHistorialCuerpo.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:red;">No se pudo conectar al servidor.</td></tr>';
+            }
+        }
+    }
+});

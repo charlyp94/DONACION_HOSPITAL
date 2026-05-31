@@ -20,6 +20,7 @@
             <a href="#">Inicio</a>
             <a href="#destino-donaciones">Destino de Donaciones</a>
             <a href="#rendicion-cuentas">Transparencia</a>
+            <a href="./donaciones_publicas.html" id="menuHistorial">Historial de Donaciones</a>
         </nav>
     </header>
 
@@ -30,6 +31,7 @@
             
             <div class="hero-botones">
                 <button id="btnAbrirModal" class="btn-donar">Realizar una Donación</button>
+                <a href="./donaciones_publicas.html" class="btn-donar" style="background-color: #1e8449; color: white; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Ver Historial de Donaciones</a>
                 <button id="btnAccesoPersonal" class="btn-donar">Panel de Gestión</button>
             </div>
         </div>
@@ -166,6 +168,7 @@
             </form>
         </div>
     </div>
+
     <div id="modalLoginAdmin" class="modal-overlay">
         <div class="modal-content-admin">
             <span class="btn-cerrar" id="btnCerrarLogin">&times;</span>
@@ -181,6 +184,42 @@
         </div>
     </div>
 
+    <div id="modalHistorial" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 650px; border-radius: 8px;">
+            <span class="btn-cerrar" id="btnCerrarHistorial">&times;</span>
+            
+            <h2>Historial de Donaciones Recibidas</h2>
+            <p class="modal-subtitulo" style="margin-bottom: 15px;">Agradecemos profundamente a la comunidad por su constante apoyo y transparencia en la gestión.</p>
+            
+            <div style="max-height: 350px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 6px; margin-top: 15px;">
+                <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; text-align: left;">
+                    <thead>
+                        <tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; position: sticky; top: 0;">
+                            <th style="padding: 12px 15px; color: #495057;">Donante</th>
+                            <th style="padding: 12px 15px; color: #495057;">Categoría</th>
+                            <th style="padding: 12px 15px; color: #495057;">Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaHistorialCuerpo">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script src="js/main.js"></script>
+    <script style="display: none;">
+        // Vinculación rápida del link del menú para abrir el modal también desde arriba
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuHistorial = document.getElementById('menuHistorial');
+            const btnVerHistorial = document.getElementById('btnVerHistorial');
+            if(menuHistorial && btnVerHistorial) {
+                menuHistorial.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    btnVerHistorial.click();
+                });
+            }
+        });
+    </script>
 </body>
 </html>

@@ -107,7 +107,7 @@ body::before {
    4. SECCIÓN PRINCIPAL (Hero Section)
    ========================================================================== */
 .hero-section {
-    padding: 110px 5%;
+    padding: 100px 5%;
     text-align: center;
     background: transparent; /* Permite apreciar el logo de fondo */
 }
