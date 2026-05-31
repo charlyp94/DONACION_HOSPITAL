@@ -62,7 +62,19 @@ app.get('/api/donaciones', (req, res) => {
         res.json(results);
     });
 });
-
+// --- RUTA GET PÚBLICA: OBTENER SOLO LAS DONACIONES APROBADAS ---
+app.get('/api/donaciones/aprobadas', (req, res) => {
+    // Filtramos en la consulta SQL para traer solo las aprobadas y ordenadas por las más recientes
+    const sql = "SELECT nombre, categoria, fecha FROM donaciones WHERE estado = 'Aprobado y Destinado' ORDER BY id DESC";
+    
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('Error al obtener el historial público:', err);
+            return res.status(500).json({ error: 'Error al obtener el historial.' });
+        }
+        res.json(results);
+    });
+});
 // --- 4. RUTA PUT: ACTUALIZAR EL ESTADO DE LA DONACIÓN ---
 app.put('/api/donaciones/:id/estado', (req, res) => {
     const { id } = req.params;
