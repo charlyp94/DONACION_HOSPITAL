@@ -1,8 +1,8 @@
 const express = require('express');
-const mysql = require('mysql2');
+const { Pool } = require('pg'); // 🔄 Cambiado a la librería de PostgreSQL
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const path = require('path'); // Modulo nativo para rutas seguras
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,26 +11,25 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// 🛠️ CORREGIDO: Servir archivos estáticos usando rutas absolutas seguras.
-// Esto evita que el navegador haga peticiones duplicadas intentando adivinar dónde está el JS.
+// Servir archivos estáticos usando rutas absolutas seguras.
 app.use(express.static(path.join(__dirname, '../public'))); 
 
-// 🔐 CONFIGURACIÓN DE CONEXIÓN SEGURA Y DINÁMICA
-// En tu PC usará los datos locales; en internet leerá las variables ocultas del servidor.
-const db = mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'ies6039',
-    database: process.env.DB_NAME || 'hospital_guemes',
-    port: process.env.DB_PORT || 3306
+// 🔐 CONFIGURACIÓN DESGLOSADA EN EL PUERTO CORRECTO (5433)
+const db = new Pool({
+    user: 'postgres',              // Tu usuario administrador
+    host: '127.0.0.1',             // IP local clásica (IPv4)
+    password: 'ies6039',           // Tu contraseña
+    database: 'hospitalguemes',    // Nombre de la base de datos
+    port: 5433,                    // 🛠️ ¡CORREGIDO! Puerto real de tu Postgres 18
 });
 
-db.connect((err) => {
+// Verificar conexión en la terminal
+db.connect((err, client, release) => {
     if (err) {
-        console.error('Error al conectar a la base de datos:', err);
-        return;
+        return console.error('❌ Error al conectar a PostgreSQL:', err.stack);
     }
-    console.log('¡Conectado exitosamente a la base de datos hospital_guemes!');
+    console.log('✨ ¡Conectado exitosamente a la base de datos PostgreSQL hospitalguemes!');
+    release();
 });
 
 // Cache temporal para evitar que registros idénticos entren duplicados en ráfaga (Anti-Bounce)
@@ -44,19 +43,19 @@ app.post('/api/donaciones', (req, res) => {
     const dniFinal = (tipoDonante === 'persona') ? dni : null;
     const fechaNacFinal = (tipoDonante === 'persona') ? fechaNacimiento : null;
 
-    // 🛑 BLINDAJE ANTI-DUPLICACIÓN: Si los datos son exactamente iguales al envío de hace menos de 2 segundos, lo frena.
+    // 🛑 BLINDAJE ANTI-DUPLICACIÓN
     const claveEnvioActual = `${correo}-${categoria}-${nombreFinal}`;
     if (ultimaDonacionCache === claveEnvioActual) {
-        console.log('⚠️ Petición duplicada bloqueada en el servidor para evitar clonación en MySQL.');
+        console.log('⚠️ Petición duplicada bloqueada en el servidor para evitar clonación.');
         return res.status(200).json({ mensaje: 'Donación ya procesada anteriormente.', duplicado: true });
     }
 
-    // Guardamos en cache por 2 segundos este envío
     ultimaDonacionCache = claveEnvioActual;
     setTimeout(() => { ultimaDonacionCache = null; }, 2000);
 
+    // 🔄 Sintaxis de Postgres usando $1, $2, $3 en lugar de los ? de MySQL
     const sql = `INSERT INTO donaciones (tipo_donante, nombre, dni, fecha_nacimiento, correo, categoria, estado) 
-                 VALUES (?, ?, ?, ?, ?, ?, 'Pendiente')`;
+                 VALUES ($1, $2, $3, $4, $5, $6, 'Pendiente') RETURNING id`;
     
     const valores = [tipoDonante, nombreFinal, dniFinal, fechaNacFinal, correo, categoria];
 
@@ -65,7 +64,8 @@ app.post('/api/donaciones', (req, res) => {
             console.error('Error al insertar donación:', err);
             return res.status(500).json({ error: 'Error al guardar la donación.' });
         }
-        return res.status(201).json({ mensaje: 'Donación registrada como Pendiente.', id: result.insertId });
+        // 🔄 En Postgres el ID nuevo se obtiene con result.rows[0].id gracias al RETURNING
+        return res.status(201).json({ mensaje: 'Donación registrada como Pendiente.', id: result.rows[0].id });
     });
 });
 
@@ -77,12 +77,13 @@ app.get('/api/donaciones', (req, res) => {
             console.error('Error al obtener donaciones:', err);
             return res.status(500).json({ error: 'Error al obtener datos.' });
         }
-        return res.json(results);
+        return res.json(results.rows); // 🔄 En Postgres los datos vienen en results.rows
     });
 });
 
-// --- RUTA GET PÚBLICA: OBTENER SOLO LAS DONACIONES APROBADAS ---
+// --- RUTA GET PÚBLICA: OBTENER SOLO LAS DONACIONES VISIBLES EN LA WEB ---
 app.get('/api/donaciones/aprobadas', (req, res) => {
+    // 🛠️ ACTUALIZADO: Ahora busca las que tengan el estado unificado 'Aprobado y Destinado'
     const sql = "SELECT nombre, categoria, fecha FROM donaciones WHERE estado = 'Aprobado y Destinado' ORDER BY id DESC";
     
     db.query(sql, (err, results) => {
@@ -90,7 +91,7 @@ app.get('/api/donaciones/aprobadas', (req, res) => {
             console.error('Error al obtener el historial público:', err);
             return res.status(500).json({ error: 'Error al obtener el historial.' });
         }
-        return res.json(results);
+        return res.json(results.rows); // 🔄 En Postgres los datos vienen en results.rows
     });
 });
 
@@ -102,18 +103,22 @@ app.put('/api/donaciones/:id/estado', (req, res) => {
     const estadosPermitidos = ['Pendiente', 'Recibido', 'Aprobado y Destinado'];
     
     if (!estadosPermitidos.includes(nuevoEstado)) {
+        console.log(`🚫 Bloqueado en servidor: '${nuevoEstado}' no está en la lista permitida.`);
         return res.status(400).json({ error: 'Estado no válido.' });
     }
 
-    const sql = `UPDATE donaciones SET estado = ? WHERE id = ?`;
+    const sql = `UPDATE donaciones SET estado = $1 WHERE id = $2`;
     
     db.query(sql, [nuevoEstado, id], (err, result) => {
         if (err) {
-            console.error('Error al actualizar estado:', err);
+            // 🔍 ESTO NOS VA A DECIR EL ERROR REAL EN LA CONSOLA NEGRA
+            console.log("================== ERROR EN POSTGRES ==================");
+            console.error(err);
+            console.log("=======================================================");
             return res.status(500).json({ error: 'Error al actualizar estado.' });
         }
         
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Donación no encontrada.' });
         }
 

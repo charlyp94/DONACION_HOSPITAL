@@ -21,7 +21,7 @@ async function cargarDonaciones() {
                             <div class="dropdown-menu">
                                 <span class="dropdown-item ${d.estado === 'Pendiente' ? 'selected' : ''}" onclick="cambiarEstadoMenu(${d.id}, 'Pendiente')">Pendiente</span>
                                 <span class="dropdown-item ${d.estado === 'Recibido' ? 'selected' : ''}" onclick="cambiarEstadoMenu(${d.id}, 'Recibido')">Recibido</span>
-                                <span class="dropdown-item ${d.estado === 'Aprobado y Destinado' ? 'selected' : ''}" onclick="cambiarEstadoMenu(${d.id}, 'Aprobado y Destinado')">Aprobado</span>
+                                <span class="dropdown-item ${d.estado === 'Aprobado y Destinado' ? 'selected' : ''}" onclick="cambiarEstadoMenu(${d.id}, 'Aprobado y Destinado')">Aprobado y Destinado</span>
                             </div>
                         </div>
                     </td>
