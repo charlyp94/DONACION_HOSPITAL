@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const camposEmpresa = document.getElementById('camposEmpresa');
     const formDonacion = document.getElementById('formDonacion');
 
+    const checkAnonimo = document.getElementById('checkAnonimo');
+
     // --- 2. LÓGICA DE APERTURA Y CIERRE DEL MODAL ---
     if (btnAbrirModal) {
         btnAbrirModal.addEventListener('click', () => {
@@ -47,14 +49,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (radioPersona.checked) {
             camposPersona.style.display = 'block';
             camposEmpresa.style.display = 'none';
-            if(document.getElementById('nombreEmpresa')) document.getElementById('nombreEmpresa').value = '';
+            if(document.getElementById('nombreEmpresa')) {
+                document.getElementById('nombreEmpresa').value = '';
+                document.getElementById('nombreEmpresa').removeAttribute('required');
+            }
+            if(document.getElementById('nombreCompleto')) document.getElementById('nombreCompleto').setAttribute('required', 'true');
+            if(document.getElementById('dni')) document.getElementById('dni').setAttribute('required', 'true');
+            if(document.getElementById('genero')) document.getElementById('genero').setAttribute('required', 'true'); // Obligatorio para persona
         } else if (radioEmpresa.checked) {
             camposEmpresa.style.display = 'block';
             camposPersona.style.display = 'none';
-            if(document.getElementById('nombreCompleto')) document.getElementById('nombreCompleto').value = '';
-            if(document.getElementById('dni')) document.getElementById('dni').value = '';
+            if(document.getElementById('nombreCompleto')) {
+                document.getElementById('nombreCompleto').value = '';
+                document.getElementById('nombreCompleto').removeAttribute('required');
+            }
+            if(document.getElementById('dni')) {
+                document.getElementById('dni').value = '';
+                document.getElementById('dni').removeAttribute('required');
+            }
             if(document.getElementById('fechaNacimiento')) document.getElementById('fechaNacimiento').value = '';
+            if(document.getElementById('genero')) {
+                document.getElementById('genero').selectedIndex = 0; // Resetea el combo
+                document.getElementById('genero').removeAttribute('required');
+            }
+            if(document.getElementById('nombreEmpresa')) document.getElementById('nombreEmpresa').setAttribute('required', 'true');
         }
+    }
+
+    // Inicializar requerimientos al cargar
+    if(radioPersona && radioPersona.checked) {
+        if(document.getElementById('genero')) document.getElementById('genero').setAttribute('required', 'true');
     }
 
     // --- 4. ENVÍO DE DATOS Y GENERACIÓN DEL COMPROBANTE PDF ---
@@ -64,6 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const tipoDonante = radioPersona.checked ? 'persona' : 'empresa';
             const correo = document.getElementById('correo').value;
+            const telefono = document.getElementById('telefono').value;
+            const generoSelect = document.getElementById('genero')?.value || null;
+            const ocultarNombreWeb = checkAnonimo ? checkAnonimo.checked : false; 
             
             const checkboxes = document.querySelectorAll('input[name="categorias"]:checked');
             const categoriasSeleccionadas = Array.from(checkboxes).map(cb => {
@@ -72,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const categoriaFinal = categoriasSeleccionadas.length > 0 ? categoriasSeleccionadas.join(', ') : 'General';
 
+            // 🛠️ ACTUALIZADO: Enviamos genero y telefono en el objeto JSON
             const datosDonacion = {
                 tipoDonante: tipoDonante,
                 nombreCompleto: document.getElementById('nombreCompleto')?.value || '',
@@ -79,7 +107,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 dni: document.getElementById('dni')?.value || null,
                 fechaNacimiento: document.getElementById('fechaNacimiento')?.value || null,
                 correo: correo,
-                categoria: categoriaFinal
+                telefono: telefono,
+                genero: generoSelect,
+                categoria: categoriaFinal,
+                ocultarNombre: ocultarNombreWeb 
             };
 
             try {
@@ -93,11 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (respuesta.ok) {
                     
-                    // ✨ CARTEL DE ÉXITO HERMOSO CON SWEETALERT2
                     Swal.fire({
                         icon: 'success',
                         title: '¡Donación Registrada!',
-                        text: 'Se ha registrado con exito su intencion de donacion, muchas gracias por colaborar con el hospital Luis A. Güemes.',
+                        text: 'Se ha registrado con éxito su intención de donación, muchas gracias por colaborar con el hospital Luis A. Güemes.',
                         showConfirmButton: false,
                         timer: 2500,
                         iconColor: '#28a745'
@@ -143,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         function armarContenidoPDF(documento, datos, tipo) {
                             documento.setFont("helvetica", "bold");
                             documento.setFontSize(22);
-                            documento.textColor(74, 44, 53); // Color #4a2c35
+                            documento.textColor(74, 44, 53); 
                             documento.text("HOSPITAL LUIS A. GÜEMES", 105, 25, { align: "center" });
 
                             documento.setFontSize(14);
@@ -165,19 +195,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             documento.text(`Donante: ${nombreMostrar}`, 20, 65);
                             documento.text(documentoTexto, 20, 75);
                             documento.text(`Correo Electrónico: ${datos.correo}`, 20, 85);
+                            // Agregamos el teléfono de contacto al PDF impreso
+                            documento.text(`Teléfono de Contacto: ${datos.telefono}`, 20, 95);
                             
                             documento.setFillColor(244, 244, 244);
-                            documento.rect(20, 95, 170, 30, "F");
+                            documento.rect(20, 105, 170, 30, "F");
                             
                             documento.setFont("helvetica", "bold");
-                            documento.text("Detalle de los Insumos / Categorías Comprometidas:", 25, 105);
+                            documento.text("Detalle de los Insumos / Categorías Comprometidas:", 25, 115);
                             documento.setFont("helvetica", "normal");
-                            documento.text(`- ${datos.categoria}`, 25, 115);
+                            documento.text(`- ${datos.categoria}`, 25, 125);
 
                             documento.setFontSize(10);
                             documento.textColor(120, 120, 120);
-                            documento.text("Este documento es un comprobante automático de registro.", 105, 150, { align: "center" });
-                            documento.text("Muchas gracias por su colaboración y compromiso con nuestra comunidad.", 105, 156, { align: "center" });
+                            documento.text("Este documento es un comprobante automático de registro.", 105, 160, { align: "center" });
+                            documento.text("Muchas gracias por su colaboración y compromiso con nuestra comunidad.", 105, 166, { align: "center" });
 
                             documento.save(`Comprobante_Donacion_${nombreMostrar.replace(/ /g, "_")}.pdf`);
                         }
@@ -188,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // ==================================================================
 
                     formDonacion.reset();
+                    alternarCamposFormulario(); 
                     cerrarModal();
                 } else {
                     Swal.fire({
@@ -212,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================================================
-// 🔐 ACCESO ESTÉTICO AL PANEL DE GESTIÓN (CON CARTELES DE ÉXITO Y ERROR)
+// 🔐 ACCESO ESTÉTICO AL PANEL DE GESTIÓN 
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     const btnPersonal = document.getElementById('btnAccesoPersonal');
@@ -226,10 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: 'Acceso Administrativo',
                 text: 'Ingrese la contraseña de acceso del personal:',
                 input: 'password',
-                inputAttributes: {
-                    autocapitalize: 'off',
-                    autocorrect: 'off'
-                },
                 showCancelButton: true,
                 confirmButtonText: 'Ingresar',
                 cancelButtonText: 'Cancelar',
@@ -237,29 +266,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 cancelButtonColor: '#6c757d',
                 inputPlaceholder: 'Contraseña corporativa',
                 inputValidator: (value) => {
-                    if (!value) {
-                        return '¡Por favor, ingrese la clave de seguridad!';
-                    }
+                    if (!value) return '¡Por favor, ingrese la clave de seguridad!';
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
                     if (result.value === "saludaguaray") {
-                        
-                        // ✨ NUEVO: CARTEL DE ACCESO CORRECTO HERMOSO
                         Swal.fire({
                             icon: 'success',
                             title: '¡Acceso Concedido!',
                             text: 'Contraseña correcta. Redirigiendo al Panel de Gestión...',
                             showConfirmButton: false,
-                            timer: 2000, // Se muestra por 2 segundos
+                            timer: 2000,
                             iconColor: '#28a745'
                         }).then(() => {
-                            // Una vez que se cierra el cartel, recién ahí te redirige
                             window.location.href = "admin.html"; 
                         });
-
                     } else {
-                        // Cartel de error que ya te gustó como quedaba
                         Swal.fire({
                             icon: 'error',
                             title: 'Acceso Denegado',
@@ -274,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================================================
-// CÓDIGO UNIFICADO PARA EL HISTORIAL PÚBLICO DE DONACIONES (CON HOVER VISUAL)
+// CÓDIGO UNIFICADO PARA EL HISTORIAL PÚBLICO DE DONACIONES
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     const btnVerHistorial = document.getElementById('btnVerHistorial');
@@ -282,41 +304,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCerrarHistorial = document.getElementById('btnCerrarHistorial');
     const tablaHistorialCuerpo = document.getElementById('tablaHistorialCuerpo');
 
-    // 🎨 EFECTO HOVER INTEGRADO POR JAVASCRIPT
     if (btnVerHistorial) {
-        // Estilos iniciales base para asegurar suavidad
         btnVerHistorial.style.transition = 'filter 0.3s ease, background-color 0.3s ease';
         btnVerHistorial.style.cursor = 'pointer';
 
-        // Cuando el mouse pasa por encima, se oscurece un 15% como los otros botones
         btnVerHistorial.addEventListener('mouseover', () => {
             btnVerHistorial.style.filter = 'brightness(85%)';
         });
 
-        // Cuando el mouse sale, vuelve a la normalidad
         btnVerHistorial.addEventListener('mouseout', () => {
             btnVerHistorial.style.filter = 'brightness(100%)';
         });
 
-        // Abrir modal y disparar consulta asíncrona
         btnVerHistorial.addEventListener('click', () => {
             modalHistorial.style.display = 'flex';
             cargarHistorialPublico();
         });
     }
 
-    // Cerrar modal con la X
     if (btnCerrarHistorial && modalHistorial) {
         btnCerrarHistorial.addEventListener('click', () => {
             modalHistorial.style.display = 'none';
         });
     }
 
-    // Cerrar haciendo clic afuera
     window.addEventListener('click', (e) => {
-        if (e.target === modalHistorial) {
-            modalHistorial.style.display = 'none';
-        }
+        if (e.target === modalHistorial) modalHistorial.style.display = 'none';
     });
 
     async function cargarHistorialPublico() {

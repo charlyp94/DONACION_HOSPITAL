@@ -104,7 +104,6 @@
 
     <div class="navbar">
         <img src="./img/logo.jpg" alt="Logo">
-        
     </div>
 
     <div class="page-title">
@@ -133,32 +132,36 @@
     <script>
         async function cargarDonacionesPublicas() {
             try {
-                // Buscamos los datos usando tu ruta relativa segura
-                const res = await fetch('/api/donaciones');
+                // 🛠️ MODIFICADO: Ahora le pega a la ruta pública que enmascara los nombres con '-'
+                const res = await fetch('/api/donaciones/aprobadas');
                 const datos = await res.json();
                 const cuerpo = document.getElementById('cuerpo-tabla');
                 
-                // Mantenemos tu lógica original intacta de filtrado por estado
-                cuerpo.innerHTML = datos
-                    .filter(d => d.estado === 'Aprobado y Destinado')
-                    .map(d => `
-                        <tr>
-                            <td style="font-weight: bold; color: #222;">${d.nombre}</td>
-                            <td>${new Date(d.fecha).toLocaleDateString('es-AR')}</td>
-                            <td>${d.categoria}</td>
-                        </tr>
-                    `).join('');
-                
-                if (cuerpo.innerHTML === '') {
+                cuerpo.innerHTML = '';
+
+                if (datos.length === 0) {
                     cuerpo.innerHTML = '<tr><td colspan="3" style="color: #777; padding: 20px;">Aún no hay donaciones aprobadas para mostrar.</td></tr>';
+                    return;
                 }
+                
+                // 🛠️ OPTIMIZADO: Mapeamos los datos directamente porque el backend ya los manda filtrados
+                cuerpo.innerHTML = datos.map(d => `
+                    <tr>
+                        <td style="font-weight: bold; color: #222;">${d.nombre}</td>
+                        <td>${d.fecha ? new Date(d.fecha).toLocaleDateString('es-AR') : 'Sin fecha'}</td>
+                        <td>${d.categoria}</td>
+                    </tr>
+                `).join('');
+                
             } catch (error) {
                 console.error("Error al cargar datos públicos:", error);
                 const cuerpo = document.getElementById('cuerpo-tabla');
                 cuerpo.innerHTML = '<tr><td colspan="3" style="color: red; font-weight: bold; padding: 20px;">Error al conectar con el servidor.</td></tr>';
             }
         }
-        cargarDonacionesPublicas();
+
+        // Ejecuta la carga cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', cargarDonacionesPublicas);
     </script>
 </body>
 </html>
