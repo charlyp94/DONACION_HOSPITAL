@@ -91,16 +91,45 @@ body::before {
     font-weight: 600;
 }
 
-.menu a {
-    text-decoration: none;
-    color: #111111;
-    font-weight: 600;
-    margin-left: 25px;
-    transition: color 0.3s ease;
+/* Contenedor del menú para alinear los nuevos botones */
+.menu {
+    display: flex;
+    gap: 12px;
+    align-items: center;
 }
 
+/* Transformación de los links de arriba en botones estéticos y uniformes */
+.menu a {
+    text-decoration: none;
+    color: #ffffff !important; /* Fuerza el texto blanco para resaltar sobre el fondo oscuro */
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.75) !important; /* Fondo oscuro elegante */
+    border: 1px solid rgba(255, 255, 255, 0.15); /* Borde sutil claro para definición */
+    margin-left: 0 !important; /* Reseteamos el margen viejo para usar el gap del contenedor */
+    transition: all 0.3s ease;
+}
+
+/* Efecto hover al pasar el mouse por encima de los botones comunes */
 .menu a:hover {
-    color: var(--bordo-suave);
+    background: rgba(0, 0, 0, 0.9) !important; /* Se oscurece un toque más al interactuar */
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Estilo destacado exclusivo para el botón de Historial (mantiene su esencia médica verde) */
+#menuHistorial {
+    background: rgba(30, 132, 73, 0.85) !important; /* Verde oscuro translúcido en sintonía con el resto */
+    border-color: rgba(30, 132, 73, 0.5);
+}
+
+#menuHistorial:hover {
+    background: var(--verde-hospital) !important;
+    border-color: #2ecc71;
+    box-shadow: 0 4px 10px rgba(30, 132, 73, 0.3);
 }
 
 /* ==========================================================================
