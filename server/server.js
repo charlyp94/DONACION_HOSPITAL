@@ -12,9 +12,9 @@ app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../public'))); 
 
 const db = new Pool({
-    user: 'postgres',              
-    host: '127.0.0.1',             
-    password: 'ies6039',           
+    user: 'postgres',             
+    host: '127.0.0.1',            
+    password: 'ies6039',          
     database: 'hospitalguemes',    
     port: 5433,                    
 });
@@ -30,28 +30,40 @@ db.connect((err, client, release) => {
 let ultimaDonacionCache = null;
 
 // --- 2. RUTA POST: RECIBIR Y GUARDAR DONACIÓN ---
-app.post('/api/donaciones', (req, res) => {
-    // 🛠️ ACTUALIZADO: Ahora recibe también 'genero' y 'telefono'
+app.post('/api/donaciones', async (req, res) => {
     const { tipoDonante, nombreCompleto, nombreEmpresa, dni, fechaNacimiento, correo, categoria, ocultarNombre, genero, telefono } = req.body;
 
     const nombreFinal = (tipoDonante === 'empresa') ? nombreEmpresa : nombreCompleto;
     const dniFinal = (tipoDonante === 'persona') ? dni : null;
     const fechaNacFinal = (tipoDonante === 'persona') ? fechaNacimiento : null;
     const ocultarFinal = ocultarNombre ? 'si' : 'no'; 
-    
-    // Si es empresa, forzamos que el género quede vacío en la BD
     const generoFinal = (tipoDonante === 'persona') ? genero : null; 
 
+    // 🛠️ VALIDACIÓN: Bloqueo de donación si ya existe una pendiente con ese correo
+    try {
+        const checkSql = "SELECT id FROM donaciones WHERE correo = $1 AND estado = 'Pendiente' LIMIT 1";
+        const checkResult = await db.query(checkSql, [correo]);
+
+        if (checkResult.rows.length > 0) {
+            // Devolvemos status 400 para que el front sepa que hubo un error de lógica
+            return res.status(400).json({ error: "Ya tienes una donación pendiente en proceso. Por favor, espera a que sea aprobada antes de realizar una nueva." });
+        }
+    } catch (err) {
+        console.error('Error al validar donación pendiente:', err);
+        return res.status(500).json({ error: 'Error interno al verificar estado de donaciones.' });
+    }
+
+    // Lógica original de anti-duplicidad por caché rápido
     const claveEnvioActual = `${correo}-${categoria}-${nombreFinal}`;
     if (ultimaDonacionCache === claveEnvioActual) {
-        console.log('⚠️ Petición duplicada bloqueada en el servidor para evitar clonación.');
+        console.log('⚠️ Petición duplicada bloqueada en el servidor.');
         return res.status(200).json({ mensaje: 'Donación ya procesada anteriormente.', duplicado: true });
     }
 
     ultimaDonacionCache = claveEnvioActual;
     setTimeout(() => { ultimaDonacionCache = null; }, 2000);
 
-    // 🛠️ ACTUALIZADO: Agregamos las columnas genero y telefono al INSERT SQL
+    // INSERT SQL
     const sql = `INSERT INTO donaciones (tipo_donante, nombre, dni, fecha_nacimiento, correo, categoria, estado, ocultar_nombre, genero, telefono) 
                  VALUES ($1, $2, $3, $4, $5, $6, 'Pendiente', $7, $8, $9) RETURNING id`;
     
@@ -66,7 +78,7 @@ app.post('/api/donaciones', (req, res) => {
     });
 });
 
-// --- 3. RUTA GET: OBTENER TODAS LAS DONACIONES (Para el Admin - Ve TODO) ---
+// --- 3. RUTA GET: OBTENER TODAS LAS DONACIONES (Para el Admin) ---
 app.get('/api/donaciones', (req, res) => {
     const sql = "SELECT * FROM donaciones ORDER BY id DESC";
     db.query(sql, (err, results) => {
@@ -78,7 +90,7 @@ app.get('/api/donaciones', (req, res) => {
     });
 });
 
-// --- RUTA GET PÚBLICA: OBTENER SOLO LAS DONACIONES VISIBLES EN LA WEB ---
+// --- RUTA GET PÚBLICA: OBTENER DONACIONES APROBADAS ---
 app.get('/api/donaciones/aprobadas', (req, res) => {
     const sql = `
         SELECT 

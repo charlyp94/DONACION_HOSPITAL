@@ -564,3 +564,16 @@ html {
     font-size: 16px;
     box-sizing: border-box;
 }
+/* Esto asegura que el SweetAlert siempre sea visible */
+.swal2-container {
+    z-index: 999999 !important;
+}
+/* Esto asegura que nada bloquee el cartel */
+.swal2-container {
+    z-index: 9999999 !important;
+}
+
+/* Verificamos que el modal no esté "flotando" encima de todo */
+#modalDonacion {
+    z-index: 1000 !important;
+}
