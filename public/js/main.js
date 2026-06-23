@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================================================
-// 🔐 ACCESO ESTÉTICO AL PANEL DE GESTIÓN 
+// 🔐 ACCESO AL PANEL DE GESTIÓN (INTEGRADO CON EL SERVIDOR)
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     const btnPersonal = document.getElementById('btnAccesoPersonal');
@@ -332,18 +332,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 inputValidator: (value) => { if (!value) return '¡Por favor, ingrese la clave de seguridad!'; }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    if (result.value === "saludaguaray") {
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Acceso Concedido!',
-                            text: 'Contraseña correcta. Redirigiendo al Panel de Gestión...',
-                            showConfirmButton: false,
-                            timer: 2000,
-                            iconColor: '#28a745'
-                        }).then(() => { window.location.href = "admin.html"; });
-                    } else {
-                        Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'Contraseña incorrecta.', confirmButtonColor: '#4a2c35' });
-                    }
+                    
+                    // --- AQUÍ ESTÁ EL CAMBIO: Enviamos la clave al servidor ---
+                    fetch('/api/verificar-acceso', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ clave: result.value })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.accesoConcedido) {
+                            // Si el servidor confirma que es correcta
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Acceso Concedido!',
+                                text: 'Redirigiendo al Panel de Gestión...',
+                                showConfirmButton: false,
+                                timer: 2000
+                            }).then(() => { window.location.href = "admin.html"; });
+                        } else {
+                            // Si el servidor dice que no
+                            Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'Contraseña incorrecta.' });
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Error al conectar con el servidor:", err);
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo contactar al servidor.' });
+                    });
                 }
             });
         });

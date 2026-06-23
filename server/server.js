@@ -1,3 +1,4 @@
+require('dotenv').config(); // Carga las variables de entorno al principio
 const express = require('express');
 const { Pool } = require('pg'); 
 const cors = require('cors');
@@ -11,12 +12,13 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../public'))); 
 
+// Conexión a la base de datos usando variables de entorno
 const db = new Pool({
-    user: 'postgres',             
-    host: '127.0.0.1',            
-    password: 'ies6039',          
-    database: 'hospitalguemes',    
-    port: 5433,                    
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE,
+    port: process.env.DB_PORT,
 });
 
 db.connect((err, client, release) => {
@@ -28,6 +30,16 @@ db.connect((err, client, release) => {
 });
 
 let ultimaDonacionCache = null;
+
+// --- RUTA DE SEGURIDAD PARA ACCESO AL PANEL ---
+app.post('/api/verificar-acceso', (req, res) => {
+    const { clave } = req.body;
+    if (clave === process.env.ADMIN_PASSWORD) {
+        res.json({ accesoConcedido: true });
+    } else {
+        res.json({ accesoConcedido: false });
+    }
+});
 
 // --- 2. RUTA POST: RECIBIR Y GUARDAR DONACIÓN ---
 app.post('/api/donaciones', async (req, res) => {
@@ -45,7 +57,6 @@ app.post('/api/donaciones', async (req, res) => {
         const checkResult = await db.query(checkSql, [correo]);
 
         if (checkResult.rows.length > 0) {
-            // Devolvemos status 400 para que el front sepa que hubo un error de lógica
             return res.status(400).json({ error: "Ya tienes una donación pendiente en proceso. Por favor, espera a que sea aprobada antes de realizar una nueva." });
         }
     } catch (err) {
