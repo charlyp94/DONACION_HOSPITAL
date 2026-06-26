@@ -43,13 +43,17 @@ app.post('/api/verificar-acceso', (req, res) => {
 
 // --- 2. RUTA POST: RECIBIR Y GUARDAR DONACIÓN ---
 app.post('/api/donaciones', async (req, res) => {
-    const { tipoDonante, nombreCompleto, nombreEmpresa, dni, fechaNacimiento, correo, categoria, ocultarNombre, genero, telefono } = req.body;
+    const { 
+        tipoDonante, nombreCompleto, nombreEmpresa, dni, fechaNacimiento, 
+        correo, categoria, ocultarNombre, genero, telefono, cantidad 
+    } = req.body;
 
     const nombreFinal = (tipoDonante === 'empresa') ? nombreEmpresa : nombreCompleto;
     const dniFinal = (tipoDonante === 'persona') ? dni : null;
     const fechaNacFinal = (tipoDonante === 'persona') ? fechaNacimiento : null;
     const ocultarFinal = ocultarNombre ? 'si' : 'no'; 
     const generoFinal = (tipoDonante === 'persona') ? genero : null; 
+    const cantidadFinal = parseInt(cantidad) || 0; // Aseguramos que sea número
 
     // 🛠️ VALIDACIÓN: Bloqueo de donación si ya existe una pendiente con ese correo
     try {
@@ -74,11 +78,11 @@ app.post('/api/donaciones', async (req, res) => {
     ultimaDonacionCache = claveEnvioActual;
     setTimeout(() => { ultimaDonacionCache = null; }, 2000);
 
-    // INSERT SQL
-    const sql = `INSERT INTO donaciones (tipo_donante, nombre, dni, fecha_nacimiento, correo, categoria, estado, ocultar_nombre, genero, telefono) 
-                 VALUES ($1, $2, $3, $4, $5, $6, 'Pendiente', $7, $8, $9) RETURNING id`;
+    // INSERT SQL (Incluye la columna cantidad)
+    const sql = `INSERT INTO donaciones (tipo_donante, nombre, dni, fecha_nacimiento, correo, categoria, estado, ocultar_nombre, genero, telefono, cantidad) 
+                 VALUES ($1, $2, $3, $4, $5, $6, 'Pendiente', $7, $8, $9, $10) RETURNING id`;
     
-    const valores = [tipoDonante, nombreFinal, dniFinal, fechaNacFinal, correo, categoria, ocultarFinal, generoFinal, telefono];
+    const valores = [tipoDonante, nombreFinal, dniFinal, fechaNacFinal, correo, categoria, ocultarFinal, generoFinal, telefono, cantidadFinal];
 
     db.query(sql, valores, (err, result) => {
         if (err) {
@@ -111,7 +115,8 @@ app.get('/api/donaciones/aprobadas', (req, res) => {
                 ELSE nombre 
             END AS nombre, 
             categoria, 
-            fecha 
+            fecha,
+            cantidad
         FROM donaciones 
         WHERE estado = 'Aprobado y Destinado' 
         ORDER BY id DESC

@@ -118,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tipoDonante = radioPersona.checked ? 'persona' : 'empresa';
             const correo = document.getElementById('correo').value;
             const telefono = document.getElementById('telefono').value;
+            const cantidad = document.getElementById('cantidad')?.value || 0; // NUEVO
             const generoSelect = document.getElementById('genero')?.value || null;
             const ocultarNombreWeb = checkAnonimo ? checkAnonimo.checked : false; 
             
@@ -138,7 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 telefono: telefono,
                 genero: generoSelect,
                 categoria: categoriaFinal,
-                ocultarNombre: ocultarNombreWeb 
+                ocultarNombre: ocultarNombreWeb,
+                cantidad: cantidad // NUEVO
             };
 
             try {
@@ -151,7 +153,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const resultado = await respuesta.json();
 
                 if (respuesta.ok) {
-                    
                     Swal.fire({
                         icon: 'success',
                         title: '¡Donación Registrada!',
@@ -161,9 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         iconColor: '#28a745'
                     });
 
-                    // ==================================================================
                     // 🚀 BLOQUE DE GENERACIÓN DEL PDF
-                    // ==================================================================
                     try {
                         const { jsPDF } = window.jspdf;
                         const doc = new jsPDF();
@@ -187,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         cargarImagenComoBase64('./img/logo.jpg')
                             .then((logoBase64) => {
+                                window.logoBase64 = logoBase64; // Guardar globalmente
                                 doc.saveGraphicsState();
                                 doc.setGState(new doc.GState({ opacity: 0.25 }));
                                 doc.addImage(logoBase64, 'JPEG', 45, 80, 120, 105);
@@ -199,87 +199,83 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
 
                         function armarContenidoPDF(documento, datos, tipo) {
-    // 1. DIBUJAR CONTENIDO (Texto y Rectángulos)
-    documento.setFont("helvetica", "bold");
-    documento.setFontSize(22);
-    documento.setTextColor(74, 44, 53); 
-    documento.text("HOSPITAL LUIS A. GÜEMES", 105, 25, { align: "center" });
+                            documento.setFont("helvetica", "bold");
+                            documento.setFontSize(22);
+                            documento.setTextColor(74, 44, 53); 
+                            documento.text("HOSPITAL LUIS A. GÜEMES", 105, 25, { align: "center" });
 
-    documento.setFontSize(14);
-    documento.setTextColor(100, 100, 100);
-    documento.text("Comprobante de Intención de Donación", 105, 35, { align: "center" });
-    
-    documento.setDrawColor(74, 44, 53);
-    documento.setLineWidth(0.5);
-    documento.line(20, 42, 190, 42);
+                            documento.setFontSize(14);
+                            documento.setTextColor(100, 100, 100);
+                            documento.text("Comprobante de Intención de Donación", 105, 35, { align: "center" });
+                            
+                            documento.setDrawColor(74, 44, 53);
+                            documento.setLineWidth(0.5);
+                            documento.line(20, 42, 190, 42);
 
-    documento.setFont("helvetica", "normal");
-    documento.setFontSize(12);
-    documento.setTextColor(50, 50, 50);
+                            documento.setFont("helvetica", "normal");
+                            documento.setFontSize(12);
+                            documento.setTextColor(50, 50, 50);
 
-    let nombreMostrar = tipo === 'persona' ? datos.nombreCompleto : datos.nombreEmpresa;
-    let documentoTexto = tipo === 'persona' ? `DNI: ${datos.dni || 'No especificado'}` : 'Tipo: Empresa / Institución';
+                            let nombreMostrar = tipo === 'persona' ? datos.nombreCompleto : datos.nombreEmpresa;
+                            let documentoTexto = tipo === 'persona' ? `DNI: ${datos.dni || 'No especificado'}` : 'Tipo: Empresa / Institución';
 
-    documento.text(`Fecha de Emisión: ${new Date().toLocaleDateString('es-AR')}`, 20, 55);
-    documento.text(`Donante: ${nombreMostrar}`, 20, 65);
-    documento.text(documentoTexto, 20, 75);
-    documento.text(`Correo Electrónico: ${datos.correo}`, 20, 85);
-    documento.text(`Teléfono de Contacto: ${datos.telefono}`, 20, 95);
-    
-    // Rectángulo gris con transparencia
-    documento.saveGraphicsState();
-    documento.setGState(new documento.GState({ opacity: 0.3 }));
-    documento.setFillColor(244, 244, 244);
-    documento.rect(20, 105, 170, 30, "F");
-    documento.restoreGraphicsState();
-    
-    documento.setFont("helvetica", "bold");
-    documento.text("Detalle de los Insumos / Categorías Comprometidas:", 25, 115);
-    documento.setFont("helvetica", "normal");
-    documento.text(`- ${datos.categoria}`, 25, 125);
+                            documento.text(`Fecha de Emisión: ${new Date().toLocaleDateString('es-AR')}`, 20, 55);
+                            documento.text(`Donante: ${nombreMostrar}`, 20, 65);
+                            documento.text(documentoTexto, 20, 75);
+                            documento.text(`Correo Electrónico: ${datos.correo}`, 20, 85);
+                            documento.text(`Teléfono de Contacto: ${datos.telefono}`, 20, 95);
+                            
+                            documento.saveGraphicsState();
+                            documento.setGState(new documento.GState({ opacity: 0.3 }));
+                            documento.setFillColor(244, 244, 244);
+                            documento.rect(20, 105, 170, 40, "F");
+                            documento.restoreGraphicsState();
+                            
+                            documento.setFont("helvetica", "bold");
+                            documento.text("Detalle de los Insumos / Categorías Comprometidas:", 25, 115);
+                            documento.setFont("helvetica", "normal");
+                            documento.text(`- Categoría: ${datos.categoria}`, 25, 125);
+                            documento.text(`- Cantidad: ${datos.cantidad} unidades`, 25, 135); // NUEVO
 
-    // Pasos a seguir
-    documento.setFont("helvetica", "bold");
-    documento.setFontSize(14);
-    documento.setTextColor(74, 44, 53);
-    documento.text("Pasos a seguir para concretar la donación:", 20, 150);
-    
-    documento.setFontSize(11);
-    documento.setTextColor(60, 60, 60);
-    const pasos = [
-        "1. Acercarse al Hospital con DNI físico y los elementos seleccionados.",
-        "2. Avisar en recepción que viene por una donación asentada en la web.",
-        "3. El personal encargado cotejará los insumos y los guardará en el depósito."
-    ];
-    let yPos = 160;
-    pasos.forEach(paso => {
-        let lineas = documento.splitTextToSize(paso, 170);
-        documento.text(lineas, 20, yPos);
-        yPos += (lineas.length * 7);
-    });
+                            documento.setFont("helvetica", "bold");
+                            documento.setFontSize(14);
+                            documento.setTextColor(74, 44, 53);
+                            documento.text("Pasos a seguir para concretar la donación:", 20, 160);
+                            
+                            documento.setFontSize(11);
+                            documento.setTextColor(60, 60, 60);
+                            const pasos = [
+                                "1. Acercarse al Hospital con DNI físico y los elementos seleccionados.",
+                                "2. Avisar en recepción que viene por una donación asentada en la web.",
+                                "3. El personal encargado cotejará los insumos y los guardará en el depósito."
+                            ];
+                            let yPos = 170;
+                            pasos.forEach(paso => {
+                                let lineas = documento.splitTextToSize(paso, 170);
+                                documento.text(lineas, 20, yPos);
+                                yPos += (lineas.length * 7);
+                            });
 
-    yPos += 20;
-    documento.setDrawColor(200, 200, 200);
-    documento.line(20, yPos, 190, yPos);
-    yPos += 10;
-    documento.setFontSize(9);
-    documento.setTextColor(100, 100, 100);
-    documento.text("Este documento es un comprobante automático de registro.", 105, yPos, { align: "center" });
-    yPos += 6;
-    documento.setFont("helvetica", "bold");
-    documento.text("¡Muchas gracias por su compromiso con el Hospital Luis A. Güemes!", 105, yPos, { align: "center" });
+                            yPos += 20;
+                            documento.setDrawColor(200, 200, 200);
+                            documento.line(20, yPos, 190, yPos);
+                            yPos += 10;
+                            documento.setFontSize(9);
+                            documento.setTextColor(100, 100, 100);
+                            documento.text("Este documento es un comprobante automático de registro.", 105, yPos, { align: "center" });
+                            yPos += 6;
+                            documento.setFont("helvetica", "bold");
+                            documento.text("¡Muchas gracias por su compromiso con el Hospital Luis A. Güemes!", 105, yPos, { align: "center" });
 
-    // 2. DIBUJAR LOGO AL FINAL (Marca de agua)
-    // Usamos esta variable 'window.logoBase64' que debemos capturar antes
-    if (window.logoBase64) {
-        documento.saveGraphicsState();
-        documento.setGState(new documento.GState({ opacity: 0.12 }));
-        documento.addImage(window.logoBase64, 'JPEG', 45, 80, 120, 105);
-        documento.restoreGraphicsState();
-    }
+                            if (window.logoBase64) {
+                                documento.saveGraphicsState();
+                                documento.setGState(new documento.GState({ opacity: 0.12 }));
+                                documento.addImage(window.logoBase64, 'JPEG', 45, 80, 120, 105);
+                                documento.restoreGraphicsState();
+                            }
 
-    documento.save(`Comprobante_Donacion_${nombreMostrar.replace(/ /g, "_")}.pdf`);
-}
+                            documento.save(`Comprobante_Donacion_${nombreMostrar.replace(/ /g, "_")}.pdf`);
+                        }
                     } catch (pdfError) {
                         console.error("Error al procesar el PDF:", pdfError);
                     }
@@ -296,7 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         confirmButtonColor: '#4a2c35'
                     });
                 }
-
             } catch (error) {
                 console.error('Error de conexión:', error);
                 Swal.fire({
@@ -311,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================================================
-// 🔐 ACCESO AL PANEL DE GESTIÓN (INTEGRADO CON EL SERVIDOR)
+// 🔐 ACCESO AL PANEL DE GESTIÓN
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     const btnPersonal = document.getElementById('btnAccesoPersonal');
@@ -332,8 +327,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 inputValidator: (value) => { if (!value) return '¡Por favor, ingrese la clave de seguridad!'; }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    
-                    // --- AQUÍ ESTÁ EL CAMBIO: Enviamos la clave al servidor ---
                     fetch('/api/verificar-acceso', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -342,7 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     .then(response => response.json())
                     .then(data => {
                         if (data.accesoConcedido) {
-                            // Si el servidor confirma que es correcta
                             Swal.fire({
                                 icon: 'success',
                                 title: '¡Acceso Concedido!',
@@ -351,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 timer: 2000
                             }).then(() => { window.location.href = "admin.html"; });
                         } else {
-                            // Si el servidor dice que no
                             Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'Contraseña incorrecta.' });
                         }
                     })
@@ -366,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================================================
-// CÓDIGO UNIFICADO PARA EL HISTORIAL PÚBLICO DE DONACIONES
+// HISTORIAL PÚBLICO
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     const btnVerHistorial = document.getElementById('btnVerHistorial');
@@ -396,12 +387,12 @@ document.addEventListener('DOMContentLoaded', () => {
     async function cargarHistorialPublico() {
         try {
             if (!tablaHistorialCuerpo) return;
-            tablaHistorialCuerpo.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Cargando historial...</td></tr>';
+            tablaHistorialCuerpo.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Cargando historial...</td></tr>';
             const respuesta = await fetch('/api/donaciones/aprobadas');
             const donaciones = await respuesta.json();
             tablaHistorialCuerpo.innerHTML = ''; 
             if (donaciones.length === 0) {
-                tablaHistorialCuerpo.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#666;">Aún no hay donaciones aprobadas para mostrar.</td></tr>';
+                tablaHistorialCuerpo.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#666;">Aún no hay donaciones aprobadas.</td></tr>';
                 return;
             }
             donaciones.forEach(donacion => {
@@ -411,6 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fila.innerHTML = `
                     <td style="padding: 12px 15px; font-weight: bold; color: #333;">${donacion.nombre}</td>
                     <td style="padding: 12px 15px; color: #555;">${donacion.categoria}</td>
+                    <td style="padding: 12px 15px; color: #555;">${donacion.cantidad || 0}</td>
                     <td style="padding: 12px 15px; color: #777;">${fechaFormateada}</td>
                 `;
                 tablaHistorialCuerpo.appendChild(fila);
@@ -418,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error al cargar el historial:', error);
             if (tablaHistorialCuerpo) {
-                tablaHistorialCuerpo.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:red;">No se pudo conectar al servidor.</td></tr>';
+                tablaHistorialCuerpo.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:red;">No se pudo conectar al servidor.</td></tr>';
             }
         }
     }

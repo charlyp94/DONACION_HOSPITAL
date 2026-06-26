@@ -14,6 +14,7 @@ async function cargarDonaciones() {
                     <td>${fechaFormateada}</td>
                     <td>${d.dni || 'N/A'}</td>
                     <td>${d.categoria}</td>
+                    <td style="font-weight: bold; color: #4a2c35;">${d.cantidad || 0}</td>
                     <td>${d.estado}</td>
                     <td>
                         <div class="dropdown-container">

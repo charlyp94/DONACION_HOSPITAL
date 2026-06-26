@@ -117,11 +117,11 @@
                     <th>Nombre / Empresa</th>
                     <th>Fecha</th>
                     <th>Categoría</th>
-                </tr>
+                    <th>Cantidad</th> </tr>
             </thead>
             <tbody id="cuerpo-tabla">
                 <tr>
-                    <td colspan="3" style="color: #666; font-style: italic;">Cargando registros públicos...</td>
+                    <td colspan="4" style="color: #666; font-style: italic;">Cargando registros públicos...</td>
                 </tr>
             </tbody>
         </table>
@@ -132,7 +132,7 @@
     <script>
         async function cargarDonacionesPublicas() {
             try {
-                // 🛠️ MODIFICADO: Ahora le pega a la ruta pública que enmascara los nombres con '-'
+                // 🛠️ Ahora le pega a la ruta pública
                 const res = await fetch('/api/donaciones/aprobadas');
                 const datos = await res.json();
                 const cuerpo = document.getElementById('cuerpo-tabla');
@@ -140,23 +140,24 @@
                 cuerpo.innerHTML = '';
 
                 if (datos.length === 0) {
-                    cuerpo.innerHTML = '<tr><td colspan="3" style="color: #777; padding: 20px;">Aún no hay donaciones aprobadas para mostrar.</td></tr>';
+                    cuerpo.innerHTML = '<tr><td colspan="4" style="color: #777; padding: 20px;">Aún no hay donaciones aprobadas para mostrar.</td></tr>';
                     return;
                 }
                 
-                // 🛠️ OPTIMIZADO: Mapeamos los datos directamente porque el backend ya los manda filtrados
+                // 🛠️ Mapeamos los datos incluyendo la cantidad
                 cuerpo.innerHTML = datos.map(d => `
                     <tr>
                         <td style="font-weight: bold; color: #222;">${d.nombre}</td>
                         <td>${d.fecha ? new Date(d.fecha).toLocaleDateString('es-AR') : 'Sin fecha'}</td>
                         <td>${d.categoria}</td>
+                        <td>${d.cantidad || 0}</td>
                     </tr>
                 `).join('');
                 
             } catch (error) {
                 console.error("Error al cargar datos públicos:", error);
                 const cuerpo = document.getElementById('cuerpo-tabla');
-                cuerpo.innerHTML = '<tr><td colspan="3" style="color: red; font-weight: bold; padding: 20px;">Error al conectar con el servidor.</td></tr>';
+                cuerpo.innerHTML = '<tr><td colspan="4" style="color: red; font-weight: bold; padding: 20px;">Error al conectar con el servidor.</td></tr>';
             }
         }
 
